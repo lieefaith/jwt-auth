@@ -1,4 +1,4 @@
-const { registerUser , loginUser , getMe } = require("../models/AuthModel")
+const { registerUser, loginUser, getMe, logoutUser} = require("../models/AuthModel")
 const { body, validationResult } = require('express-validator');
 
 
@@ -83,4 +83,26 @@ async function me(req, res) {
   }
 }
 
-module.exports = { register ,login ,me}
+async function logout(req, res) {
+  try {
+    const token = req.headers.authorization;
+    const result = await logoutUser(token);
+    if (!result) {
+      return res.status(404).json({ error: true, message: "User not found" });
+    }
+
+    if (result.success) {
+      res.status(201).json({
+        success: result.success,
+        message: result.message,
+      });
+    } else {
+      res.status(500).json({ error: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
+module.exports = { register ,login ,me, logout}

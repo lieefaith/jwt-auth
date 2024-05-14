@@ -22,4 +22,15 @@ const verifyToken = (req, res, next) => {
   });
 };
 
+// async function verifyToken(req, res, next) {
+//   const token = req.headers.authorization;
+//   jwt.verify(token, "bazmaSecretKey", decode) {
+//     if (err) {
+//       return res.status(401).json({
+//         message: "Invalid token. Unauthorized",
+//       });
+//     }
+//   }
+// }
+
 module.exports = verifyToken ;
