@@ -1,87 +1,116 @@
-const { registerUser, loginUser, getMe, logoutUser} = require("../models/AuthModel")
-const { body, validationResult } = require('express-validator');
-
+const {
+  registerUser,
+  loginUser,
+  logoutUser,
+  getMe,
+} = require("../models/AuthModel");
+const { body, validationResult } = require("express-validator");
 
 async function register(req, res) {
-  const validations = [
-    body("name").notEmpty().withMessage("name is required"),
+  const validation = [
+    body("name").notEmpty().withMessage("Name is required"),
     body("email").notEmpty().isEmail().withMessage("Email is required"),
     body("password").notEmpty().withMessage("Password is required"),
-    body("phone").notEmpty().withMessage("Password is required"),
+    body("phone").notEmpty().withMessage("Phone is required"),
   ];
-  await Promise.all(validations.map((validation) => validation.run(req)));
+  await Promise.all(validation.map((v) => v.run(req)));
   const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const errMsg = errors.array().map((error) => ({ [error.path]: error.msg }));
-    return res.status(422).json({ errors: errMsg });
-  }
 
-  const { name, email, password , phone} = req.body;
+  if (!errors.isEmpty()) {
+    const errMsg = errors.array().map((error) => ({
+      [error.path]: error.msg,
+    }));
+    return res.status(422).json({
+      status: false,
+      message: "error validation fields",
+      error: errMsg,
+    });
+  }
+  const { name, email, password, phone } = req.body;
   try {
     const result = await registerUser(name, email, password, phone);
     if (result.success) {
-      res
-        .status(201)
-        .json({ success: true, message: result.message, data: result.data });
+      res.status(201).json({
+        success: result.success,
+        message: result.message,
+        data: {
+          id: result.data.insertId,
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+        },
+      });
     } else {
       res.status(500).json({ error: result.message });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
   }
 }
 
-
+// login dari authModel
 async function login(req, res) {
-  const validations = [
-    body("email").notEmpty().withMessage("Email is required"),
+  const validation = [
+    body("email").notEmpty().isEmail().withMessage("Email is required"),
     body("password").notEmpty().withMessage("Password is required"),
   ];
-  await Promise.all(validations.map((validation) => validation.run(req)));
+  await Promise.all(validation.map((v) => v.run(req)));
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const errMsg = errors.array().map((error) => ({ [error.path]: error.msg }));
-    return res.status(422).json({ errors: errMsg });
+    const errMsg = errors.array().map((error) => ({
+      [error.path]: error.msg,
+    }));
+    return res.status(422).json({
+      success: false,
+      message: "Validation error",
+      errors: errMsg,
+    });
   }
+
   const { email, password } = req.body;
   try {
     const result = await loginUser(email, password);
     if (result.success) {
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: result.message,
-          token: result.createToken,
-        });
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        user: result.user,
+        token: result.token,
+      });
     } else {
-      res.status(401).json({ error: result.message });
+      res.status(401).json({ success: false, error: result.message });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
+
+// get Me dari authModel
+
 async function me(req, res) {
   try {
-    const token = req.header("Authorization");
-    if (!token)
-      return res.status(401).json({
-        status: "401 Unauthorized",
-      });
-
+    const token = req.headers.authorization;
     const user = await getMe(token);
+    if (!user) {
+      return res.status(404).json({ error: true, message: "User not found" });
+    }
     if (user.success) {
-      res
-        .status(200)
-        .json({ success: true, message: user.message, data: user.data });
+      res.status(200).json({
+        success: user.success,
+        message: user.message,
+        data: user.data,
+      });
     }
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: error.message });
+    return res
+      .status(500)
+      .json({ error: true, message: "Failed to fetch user data" });
   }
 }
+
+// logout dari authModel
 
 async function logout(req, res) {
   try {
@@ -104,5 +133,4 @@ async function logout(req, res) {
   }
 }
 
-
-module.exports = { register ,login ,me, logout}
+module.exports = { register, login, me, logout };
